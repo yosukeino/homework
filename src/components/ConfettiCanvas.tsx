@@ -30,7 +30,7 @@ export function ConfettiCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
-    const colors = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+    const colors = ["#0f6853", "#c26d17", "#17191c", "#3b8a75", "#d99b38", "#b83227"];
     const pieces: ConfettiPiece[] = Array.from({ length: 95 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * -canvas.height,

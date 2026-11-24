@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Flame, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, BookOpen, Volume2, VolumeX } from "lucide-react";
 
 interface StartScreenProps {
   targetStreak: number;
@@ -32,7 +32,7 @@ export function StartScreen({
     e.preventDefault();
     const cleaned = name.trim();
     if (!cleaned) {
-      setError("名前を入力してからスタートしてください。");
+      setError("提出確認のため、名前を入力してから開始してください。");
       return;
     }
     setError("");
@@ -42,123 +42,135 @@ export function StartScreen({
   return (
     <motion.section
       key="screen-start"
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
     >
-      <div className="card">
-        <div className="start-hero">
-          <motion.div
-            className="hero-badge"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.06, type: "spring", stiffness: 320, damping: 22 }}
-          >
-            <Sparkles size={14} />
-            <span>中学英語 オンライン宿題</span>
-          </motion.div>
-
-          <h1 className="start-title">
-            人称代名詞
-            <br />
-            <span className="highlight">{targetStreak}問連続正解</span>チャレンジ
-          </h1>
-          <p className="start-subtitle">
-            全{totalPoolCount}問からランダム出題！1問ずつクリアして宿題を終わらせよう
-          </p>
+      {/* 上部ミニマルストリップ */}
+      <div className="top-strip">
+        <div className="top-strip-left">
+          <span className="unit-dot" aria-hidden="true" />
+          <span>中学英語・オンライン宿題</span>
+          <span aria-hidden="true">/</span>
+          <span className="font-mono">POOL {totalPoolCount}Q</span>
         </div>
 
-        <div className="rules-box">
-          <p className="rules-title">
-            <Flame size={15} color="#ea580c" />
-            <span>ルール</span>
-          </p>
-          <ul className="rules-list">
-            <li>
-              <span className="rule-num">1</span>
-              <span>毎回ランダムに出る問題に、6つの選択肢から答えよう。</span>
-            </li>
-            <li>
-              <span className="rule-num">2</span>
-              <span>
-                <strong>{targetStreak}問連続で正解</strong>すると宿題クリア！自動で先生に提出されます。
-              </span>
-            </li>
-            <li>
-              <span className="rule-num">3</span>
-              <span>
-                1問でも間違えると <strong className="rule-danger">0問目からやり直し</strong>{" "}
-                になります。（間違えた時だけ「変化表」で復習できます）
-              </span>
-            </li>
-          </ul>
-        </div>
+        <button type="button" className="ghost-toggle" onClick={onToggleSound}>
+          {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <span>効果音 {soundEnabled ? "ON" : "OFF"}</span>
+        </button>
+      </div>
 
-        <form className="name-form" onSubmit={handleSubmit} noValidate>
+      {/* メインカバーシート */}
+      <div className="sheet start-sheet">
+        <div className="start-header">
           <div>
-            <label htmlFor="student-name-input" className="field-label">
-              あなたの名前を入力してください<small>（提出確認に使います）</small>
-            </label>
-            <input
-              id="student-name-input"
-              type="text"
-              className={`name-input${error ? " input-error" : ""}`}
-              maxLength={30}
-              placeholder="例：山田 太郎"
-              autoComplete="name"
-              autoFocus
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (e.target.value.trim()) setError("");
-              }}
-            />
-            <p className="error-msg" role="alert">
-              {error}
+            <div className="eyebrow font-en">PERSONAL PRONOUNS DRILL</div>
+            <h1 className="start-title">人称代名詞 連続正解チャレンジ</h1>
+            <p className="start-lead">
+              主格・所有格・目的格・所有代名詞の使い分けを、1問ずつテンポよく演習します。
             </p>
           </div>
 
-          <motion.button
-            type="submit"
-            className="btn-primary-lg"
-            whileHover={{ scale: 1.015 }}
-            whileTap={{ scale: 0.98 }}
+          <motion.div
+            className="target-monogram"
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.08, duration: 0.28 }}
           >
-            <span>チャレンジ開始！</span>
-            <ArrowRight size={19} />
-          </motion.button>
-
-          <motion.button
-            type="button"
-            className="btn-hint-outline"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.985 }}
-            onClick={onOpenHint}
-          >
-            <BookOpen size={16} />
-            <span>挑戦前に「人称代名詞の変化表」を確認する</span>
-          </motion.button>
-        </form>
-
-        <div className="start-footer-meta">
-          <span className="best-streak-pill">
-            <Trophy size={14} color="#d97706" />
-            <span>
-              この端末の最高連続記録：{bestStreak} / {targetStreak}問
-            </span>
-          </span>
-          <button type="button" className="btn-icon-ghost" onClick={onToggleSound}>
-            {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-            <span>効果音：{soundEnabled ? "ON" : "OFF"}</span>
-          </button>
+            <span className="target-monogram-num font-mono">{targetStreak}</span>
+            <span className="target-monogram-label">連続正解でクリア</span>
+          </motion.div>
         </div>
 
-        {!isGasConfigured && (
-          <div className="demo-notice">
-            ※現在テストモードで動作中です（環境変数 GAS_WEB_APP_URL 未設定）。このまま全機能を体験できます。
+        <div className="start-body">
+          {/* 3列ルールグリッド */}
+          <div className="rules-grid">
+            <div className="rule-cell">
+              <div className="rule-index font-mono">01 / FORMAT</div>
+              <p className="rule-heading">全{totalPoolCount}問からランダム6択</p>
+              <p className="rule-desc">
+                1問ごとに画面が切り替わります。直感と文法ルールの両方を鍛えよう。
+              </p>
+            </div>
+
+            <div className="rule-cell">
+              <div className="rule-index font-mono">02 / CLEAR</div>
+              <p className="rule-heading">{targetStreak}問連続で自動提出</p>
+              <p className="rule-desc">
+                達成した瞬間にクリア記録が先生へ届き、今日の宿題は完了です。
+              </p>
+            </div>
+
+            <div className="rule-cell">
+              <div className="rule-index font-mono">03 / RESET</div>
+              <p className="rule-heading is-warn">1ミスで 0問目へリセット</p>
+              <p className="rule-desc">
+                解答中はヒントなし。間違えた直後だけ「変化表」で復習できます。
+              </p>
+            </div>
           </div>
-        )}
+
+          {/* 氏名入力＋開始 */}
+          <form className="entry-form" onSubmit={handleSubmit} noValidate>
+            <div>
+              <div className="field-head">
+                <label htmlFor="student-name-input" className="field-label">
+                  氏名
+                </label>
+                <span className="field-note">クリア時の提出確認に記録されます</span>
+              </div>
+
+              <div className="name-row">
+                <input
+                  id="student-name-input"
+                  type="text"
+                  className={`name-input${error ? " input-error" : ""}`}
+                  maxLength={30}
+                  placeholder="例：山田 太郎"
+                  autoComplete="name"
+                  autoFocus
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (e.target.value.trim()) setError("");
+                  }}
+                />
+
+                <button type="submit" className="btn-ink">
+                  <span>開始する</span>
+                  <ArrowRight size={17} />
+                </button>
+              </div>
+
+              <p className="error-msg" role="alert">
+                {error}
+              </p>
+            </div>
+          </form>
+
+          {/* 下部フッター（変化表リンク＆端末内ベスト） */}
+          <div className="start-footer">
+            <button type="button" className="btn-paper-outline" onClick={onOpenHint}>
+              <BookOpen size={15} />
+              <span>挑戦前に「人称代名詞の変化表」を確認</span>
+            </button>
+
+            <div className="record-stat">
+              <span>この端末の最高連続</span>
+              <strong className="font-mono">
+                {String(bestStreak).padStart(2, "0")} / {targetStreak}
+              </strong>
+            </div>
+          </div>
+
+          {!isGasConfigured && (
+            <div className="demo-notice">
+              テストモードで動作中（環境変数 GAS_WEB_APP_URL 未設定）
+            </div>
+          )}
+        </div>
       </div>
     </motion.section>
   );

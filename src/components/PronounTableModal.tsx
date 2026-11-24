@@ -127,8 +127,8 @@ export function PronounTableModal({ open, onClose }: PronounTableModalProps) {
             <div className="modal-footer">
               <button
                 type="button"
-                className="btn-primary-lg"
-                style={{ width: "auto", padding: "10px 22px", fontSize: "14px" }}
+                className="btn-ink"
+                style={{ padding: "10px 22px", fontSize: "13.5px" }}
                 onClick={onClose}
               >
                 閉じる
