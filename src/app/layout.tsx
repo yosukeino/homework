@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "人称代名詞 20問連続チャレンジ | 中学英語ドリル",
+  title: "中学英語 20問連続チャレンジ | オンライン宿題",
   description:
     "全50問からランダム出題。20問連続正解でクリア＆自動提出できる中学生向けオンライン英語宿題アプリです。",
 };

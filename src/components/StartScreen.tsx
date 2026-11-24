@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Volume2, VolumeX } from "lucide-react";
+import type { DrillDefinition } from "@/types/drill";
 
 interface StartScreenProps {
-  targetStreak: number;
-  totalPoolCount: number;
+  drill: DrillDefinition;
   bestStreak: number;
   soundEnabled: boolean;
   isGasConfigured: boolean;
@@ -16,8 +17,7 @@ interface StartScreenProps {
 }
 
 export function StartScreen({
-  targetStreak,
-  totalPoolCount,
+  drill,
   bestStreak,
   soundEnabled,
   isGasConfigured,
@@ -41,7 +41,7 @@ export function StartScreen({
 
   return (
     <motion.section
-      key="screen-start"
+      key={`screen-start-${drill.slug}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -50,10 +50,14 @@ export function StartScreen({
       {/* 上部ミニマルストリップ */}
       <div className="top-strip">
         <div className="top-strip-left">
+          <Link href="/" className="ghost-toggle" style={{ textDecoration: "none" }}>
+            <ArrowLeft size={14} />
+            <span>単元一覧</span>
+          </Link>
           <span className="unit-dot" aria-hidden="true" />
-          <span>中学英語・オンライン宿題</span>
+          <span>{drill.grade}</span>
           <span aria-hidden="true">/</span>
-          <span className="font-mono">POOL {totalPoolCount}Q</span>
+          <span className="font-mono">POOL {drill.questions.length}Q</span>
         </div>
 
         <button type="button" className="ghost-toggle" onClick={onToggleSound}>
@@ -66,11 +70,9 @@ export function StartScreen({
       <div className="sheet start-sheet">
         <div className="start-header">
           <div>
-            <div className="eyebrow font-en">PERSONAL PRONOUNS DRILL</div>
-            <h1 className="start-title">人称代名詞 連続正解チャレンジ</h1>
-            <p className="start-lead">
-              主格・所有格・目的格・所有代名詞の使い分けを、1問ずつテンポよく演習します。
-            </p>
+            <div className="eyebrow font-en">{drill.eyebrow}</div>
+            <h1 className="start-title">{drill.title}</h1>
+            <p className="start-lead">{drill.lead}</p>
           </div>
 
           <motion.div
@@ -79,7 +81,7 @@ export function StartScreen({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.08, duration: 0.28 }}
           >
-            <span className="target-monogram-num font-mono">{targetStreak}</span>
+            <span className="target-monogram-num font-mono">{drill.targetStreak}</span>
             <span className="target-monogram-label">連続正解でクリア</span>
           </motion.div>
         </div>
@@ -89,15 +91,15 @@ export function StartScreen({
           <div className="rules-grid">
             <div className="rule-cell">
               <div className="rule-index font-mono">01 / FORMAT</div>
-              <p className="rule-heading">全{totalPoolCount}問からランダム6択</p>
+              <p className="rule-heading">全{drill.questions.length}問からランダム6択</p>
               <p className="rule-desc">
-                1問ごとに画面が切り替わります。直感と文法ルールの両方を鍛えよう。
+                1問ごとに画面が切り替わります。文法ルールと瞬発力の両方を鍛えよう。
               </p>
             </div>
 
             <div className="rule-cell">
               <div className="rule-index font-mono">02 / CLEAR</div>
-              <p className="rule-heading">{targetStreak}問連続で自動提出</p>
+              <p className="rule-heading">{drill.targetStreak}問連続で自動提出</p>
               <p className="rule-desc">
                 達成した瞬間にクリア記録が先生へ届き、今日の宿題は完了です。
               </p>
@@ -107,7 +109,7 @@ export function StartScreen({
               <div className="rule-index font-mono">03 / RESET</div>
               <p className="rule-heading is-warn">1ミスで 0問目へリセット</p>
               <p className="rule-desc">
-                解答中はヒントなし。間違えた直後だけ「変化表」で復習できます。
+                解答中はヒントなし。間違えた直後だけ「ルール表」で復習できます。
               </p>
             </div>
           </div>
@@ -150,17 +152,17 @@ export function StartScreen({
             </div>
           </form>
 
-          {/* 下部フッター（変化表リンク＆端末内ベスト） */}
+          {/* 下部フッター（ヒントリンク＆端末内ベスト） */}
           <div className="start-footer">
             <button type="button" className="btn-paper-outline" onClick={onOpenHint}>
               <BookOpen size={15} />
-              <span>挑戦前に「人称代名詞の変化表」を確認</span>
+              <span>{drill.hintButtonLabel}</span>
             </button>
 
             <div className="record-stat">
               <span>この端末の最高連続</span>
               <strong className="font-mono">
-                {String(bestStreak).padStart(2, "0")} / {targetStreak}
+                {String(bestStreak).padStart(2, "0")} / {drill.targetStreak}
               </strong>
             </div>
           </div>

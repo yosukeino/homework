@@ -13,7 +13,8 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { CHOICE_LETTERS, PronounCaseType, PronounQuestion } from "@/data/pronouns";
+import { CHOICE_LETTERS } from "@/data/pronouns";
+import type { BadgeTone, DrillQuestion } from "@/types/drill";
 
 export interface LastAnswerResult {
   isCorrect: boolean;
@@ -24,11 +25,12 @@ export interface LastAnswerResult {
 interface PlayScreenProps {
   studentName: string;
   targetStreak: number;
+  reviewHintButtonLabel: string;
   streak: number;
   totalAnswered: number;
   missCount: number;
   questionIndex: number;
-  question: PronounQuestion;
+  question: DrillQuestion;
   choices: string[];
   answered: boolean;
   lastResult: LastAnswerResult | null;
@@ -40,15 +42,15 @@ interface PlayScreenProps {
   onRequestExit: () => void;
 }
 
-function getCaseTagClass(caseType: PronounCaseType): string {
-  switch (caseType) {
-    case "主格":
+function getToneTagClass(tone: BadgeTone): string {
+  switch (tone) {
+    case "blue":
       return "tag-subject";
-    case "所有格":
+    case "emerald":
       return "tag-possessive";
-    case "目的格":
+    case "violet":
       return "tag-object";
-    case "所有代名詞":
+    case "ochre":
       return "tag-poss-pronoun";
   }
 }
@@ -56,6 +58,7 @@ function getCaseTagClass(caseType: PronounCaseType): string {
 export function PlayScreen({
   studentName,
   targetStreak,
+  reviewHintButtonLabel,
   streak,
   totalAnswered,
   missCount,
@@ -86,6 +89,9 @@ export function PlayScreen({
   const isReach = streak === targetStreak - 1;
   const isHot = streak >= Math.ceil(targetStreak * 0.5) && !isReach;
   const nextStreakNum = streak + 1;
+
+  // 長い選択肢（例：the most interesting）が含まれるときは2列グリッドにして読みやすくする
+  const hasLongChoices = choices.some((c) => c.length >= 13);
 
   let progressMsg = `${targetStreak}問連続正解でクリア`;
   if (streak > 0) {
@@ -301,7 +307,11 @@ export function PlayScreen({
           </div>
 
           {/* 6択キートップボタン */}
-          <div className="choices-grid" role="group" aria-label="選択肢">
+          <div
+            className={`choices-grid${hasLongChoices ? " choices-grid-wide" : ""}`}
+            role="group"
+            aria-label="選択肢"
+          >
             {choices.map((word, idx) => {
               let btnClass = "choice-key";
               let animateProps: { x?: number[]; scale?: number[] } = {};
@@ -333,7 +343,7 @@ export function PlayScreen({
                   onClick={() => onSelectChoice(idx)}
                 >
                   <span className="keycap">{CHOICE_LETTERS[idx]}</span>
-                  <span>{word}</span>
+                  <span className="choice-text">{word}</span>
                 </motion.button>
               );
             })}
@@ -372,8 +382,8 @@ export function PlayScreen({
                       </>
                     )}
 
-                    <span className={`case-tag ${getCaseTagClass(question.caseType)}`}>
-                      {question.caseType}
+                    <span className={`case-tag ${getToneTagClass(question.badgeTone)}`}>
+                      {question.category}
                     </span>
                   </div>
 
@@ -381,7 +391,7 @@ export function PlayScreen({
                     <p className="reset-note">
                       {lastResult.lostStreak > 0
                         ? `連続 ${lastResult.lostStreak} 問でストップ。記録は 0 にリセットされました。`
-                        : "記録は 0 のままです。解説と変化表を確認してから再挑戦しましょう。"}
+                        : "記録は 0 のままです。解説とルール表を確認してから再挑戦しましょう。"}
                     </p>
                   )}
 
@@ -389,7 +399,7 @@ export function PlayScreen({
                 </div>
 
                 <div ref={actionsRef} className="stage-actions">
-                  {/* 間違えた直後のみ「変化表」を開放 */}
+                  {/* 間違えた直後のみ「ルール表」を開放 */}
                   {!lastResult.isCorrect && (
                     <button
                       type="button"
@@ -397,7 +407,7 @@ export function PlayScreen({
                       onClick={onOpenReviewHint}
                     >
                       <BookOpen size={15} />
-                      <span>人称代名詞の変化表で復習する</span>
+                      <span>{reviewHintButtonLabel}</span>
                     </button>
                   )}
 

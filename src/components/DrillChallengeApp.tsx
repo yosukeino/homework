@@ -3,22 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { ClearSubmissionPayload } from "@/app/api/submit/route";
-import {
-  CHOICE_LETTERS,
-  DRILL_CONFIG,
-  PronounQuestion,
-  QUESTION_POOL,
-} from "@/data/pronouns";
+import { CHOICE_LETTERS } from "@/data/pronouns";
 import { playSoundEffect } from "@/lib/sound";
+import type { DrillDefinition, DrillQuestion } from "@/types/drill";
 import { ClearScreen, SubmitStatus } from "./ClearScreen";
+import { HintTableModal } from "./HintTableModal";
 import { LastAnswerResult, PlayScreen } from "./PlayScreen";
-import { PronounTableModal } from "./PronounTableModal";
 import { StartScreen } from "./StartScreen";
 
 type ScreenPhase = "start" | "play" | "clear";
 
-const STORAGE_BEST_KEY = "pronoun_20streak_best";
-const STORAGE_SOUND_KEY = "pronoun_20streak_sound";
+const STORAGE_SOUND_KEY = "homework_sound_enabled";
 
 function shuffleArray<T>(arr: readonly T[]): T[] {
   const copy = [...arr];
@@ -47,12 +42,13 @@ function generateSubmissionId(): string {
   return `CLR-${ts}-${rand}`;
 }
 
-interface PronounChallengeAppProps {
+interface DrillChallengeAppProps {
+  drill: DrillDefinition;
   isGasConfigured: boolean;
 }
 
-export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProps) {
-  const targetStreak = DRILL_CONFIG.targetStreak;
+export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppProps) {
+  const targetStreak = drill.targetStreak;
 
   const [screen, setScreen] = useState<ScreenPhase>("start");
   const [studentName, setStudentName] = useState("");
@@ -61,12 +57,12 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
   const [hintModalOpen, setHintModalOpen] = useState(false);
 
   // プレイ状態
-  const deckRef = useRef<PronounQuestion[]>([]);
+  const deckRef = useRef<DrillQuestion[]>([]);
   const lastQuestionIdRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
 
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [currentQuestion, setCurrentQuestion] = useState<PronounQuestion | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<DrillQuestion | null>(null);
   const [currentChoices, setCurrentChoices] = useState<string[]>([]);
   const [answered, setAnswered] = useState(false);
   const [lastResult, setLastResult] = useState<LastAnswerResult | null>(null);
@@ -80,29 +76,31 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
   const [submitError, setSubmitError] = useState("");
   const isSendingRef = useRef(false);
 
-  // 端末内設定の読み込み
   useEffect(() => {
     try {
-      const savedBest = parseInt(localStorage.getItem(STORAGE_BEST_KEY) || "0", 10);
+      const savedBest = parseInt(localStorage.getItem(drill.storageKey) || "0", 10);
       if (!Number.isNaN(savedBest)) setBestStreak(savedBest);
       const savedSound = localStorage.getItem(STORAGE_SOUND_KEY);
       if (savedSound === "0") setSoundEnabled(false);
     } catch {
-      // localStorage 不可環境では無視
+      // ignore
     }
-  }, []);
+  }, [drill.storageKey]);
 
-  const updateBestStreak = useCallback((nextStreak: number) => {
-    setBestStreak((prev) => {
-      if (nextStreak <= prev) return prev;
-      try {
-        localStorage.setItem(STORAGE_BEST_KEY, String(nextStreak));
-      } catch {
-        // ignore
-      }
-      return nextStreak;
-    });
-  }, []);
+  const updateBestStreak = useCallback(
+    (nextStreak: number) => {
+      setBestStreak((prev) => {
+        if (nextStreak <= prev) return prev;
+        try {
+          localStorage.setItem(drill.storageKey, String(nextStreak));
+        } catch {
+          // ignore
+        }
+        return nextStreak;
+      });
+    },
+    [drill.storageKey]
+  );
 
   const toggleSound = useCallback(() => {
     setSoundEnabled((prev) => {
@@ -120,9 +118,9 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
   }, []);
 
   // デッキ式シャッフル出題（同じ問題がすぐ連続しない）
-  const drawNextQuestion = useCallback((): PronounQuestion => {
+  const drawNextQuestion = useCallback((): DrillQuestion => {
     if (deckRef.current.length === 0) {
-      const fresh = shuffleArray(QUESTION_POOL);
+      const fresh = shuffleArray(drill.questions);
       if (
         lastQuestionIdRef.current !== null &&
         fresh.length > 1 &&
@@ -136,7 +134,7 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     const q = deckRef.current.shift()!;
     lastQuestionIdRef.current = q.id;
     return q;
-  }, []);
+  }, [drill.questions]);
 
   const loadNextQuestion = useCallback(() => {
     const q = drawNextQuestion();
@@ -172,7 +170,6 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     [drawNextQuestion]
   );
 
-  // /api/submit 経由でスプレッドシートへ自動送信
   const submitClearRecord = useCallback(async (record: ClearSubmissionPayload) => {
     if (isSendingRef.current) return;
     isSendingRef.current = true;
@@ -192,16 +189,12 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
         throw new Error(data.error || `送信エラー (HTTP ${res.status})`);
       }
 
-      if (data.demo) {
-        setSubmitStatus("demo");
-      } else {
-        setSubmitStatus("ok");
-      }
+      setSubmitStatus(data.demo ? "demo" : "ok");
     } catch (err) {
       setSubmitStatus("error");
       setSubmitError(
         err instanceof Error
-          ? `${err.message} — 通信状況を確認して「もう一度送信する」を押してください。`
+          ? `${err.message} — 通信状況を確認して再送信してください。`
           : "送信に失敗しました。"
       );
     } finally {
@@ -209,7 +202,6 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     }
   }, []);
 
-  // 選択肢クリック時の即時判定
   const handleSelectChoice = useCallback(
     (choiceIdx: number) => {
       if (answered || !currentQuestion) return;
@@ -244,7 +236,6 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     [answered, currentQuestion, currentChoices, streak, targetStreak, soundEnabled, updateBestStreak]
   );
 
-  // 次の問題へ or クリア画面へ
   const handleNext = useCallback(() => {
     if (!answered) return;
     if (streak >= targetStreak) {
@@ -256,7 +247,7 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
       const record: ClearSubmissionPayload = {
         submissionId: generateSubmissionId(),
         studentName,
-        unitName: DRILL_CONFIG.unitName,
+        unitName: drill.unitName,
         targetStreak,
         totalAnswered,
         missCount,
@@ -277,13 +268,13 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     streak,
     targetStreak,
     studentName,
+    drill.unitName,
     totalAnswered,
     missCount,
     submitClearRecord,
     loadNextQuestion,
   ]);
 
-  // ヒントモーダル（スタート画面 & 間違えた直後の復習時のみ開ける）
   const openHintIfAllowed = useCallback(() => {
     if (screen === "start") {
       setHintModalOpen(true);
@@ -297,7 +288,7 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
   const handleRequestExit = useCallback(() => {
     if (streak > 0) {
       const ok = window.confirm(
-        `現在 ${streak} 問連続正解中です。最初の画面に戻ると記録がリセットされますが、よろしいですか？`
+        `現在 ${streak} 問連続正解中です。スタート画面に戻ると記録がリセットされますが、よろしいですか？`
       );
       if (!ok) return;
     }
@@ -306,7 +297,6 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [streak]);
 
-  // PC向けキーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (hintModalOpen || screen !== "play") return;
@@ -342,8 +332,7 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
         {screen === "start" && (
           <StartScreen
             key="start"
-            targetStreak={targetStreak}
-            totalPoolCount={QUESTION_POOL.length}
+            drill={drill}
             bestStreak={bestStreak}
             soundEnabled={soundEnabled}
             isGasConfigured={isGasConfigured}
@@ -358,6 +347,7 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
             key="play"
             studentName={studentName}
             targetStreak={targetStreak}
+            reviewHintButtonLabel={drill.reviewHintButtonLabel}
             streak={streak}
             totalAnswered={totalAnswered}
             missCount={missCount}
@@ -391,7 +381,11 @@ export function PronounChallengeApp({ isGasConfigured }: PronounChallengeAppProp
         )}
       </AnimatePresence>
 
-      <PronounTableModal open={hintModalOpen} onClose={() => setHintModalOpen(false)} />
+      <HintTableModal
+        open={hintModalOpen}
+        kind={drill.hintKind}
+        onClose={() => setHintModalOpen(false)}
+      />
     </main>
   );
 }
