@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IrregularTilesApp } from "@/components/IrregularTilesApp";
+import { isAnyStorageConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function IrregularTilesPage() {
-  const isGasConfigured = Boolean((process.env.GAS_WEB_APP_URL || "").trim());
-  return <IrregularTilesApp isGasConfigured={isGasConfigured} />;
+  return <IrregularTilesApp isGasConfigured={isAnyStorageConfigured()} />;
 }

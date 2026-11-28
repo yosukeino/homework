@@ -1,23 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
+  ArrowRight,
   Check,
   Loader2,
   RefreshCw,
   RotateCcw,
   Sparkles,
+  Trophy,
 } from "lucide-react";
 import type { ClearSubmissionPayload } from "@/app/api/submit/route";
 import { ConfettiCanvas } from "./ConfettiCanvas";
 
 export type SubmitStatus = "sending" | "ok" | "demo" | "error";
 
+export interface ClearRankInfo {
+  rank: number;
+  totalPlayers: number;
+}
+
 interface ClearScreenProps {
   record: ClearSubmissionPayload;
   submitStatus: SubmitStatus;
   submitError: string;
+  rankInfo?: ClearRankInfo | null;
   onRetrySubmit: () => void;
   onPlayAgain: () => void;
   onReturnToStart: () => void;
@@ -27,10 +36,13 @@ export function ClearScreen({
   record,
   submitStatus,
   submitError,
+  rankInfo = null,
   onRetrySubmit,
   onPlayAgain,
   onReturnToStart,
 }: ClearScreenProps) {
+  const rankingHref = `/rankings?unit=${encodeURIComponent(record.unitSlug)}&highlight=${encodeURIComponent(record.studentName)}`;
+
   return (
     <>
       <ConfettiCanvas />
@@ -82,7 +94,7 @@ export function ClearScreen({
                 <>
                   <div className="submit-banner-title">
                     <Check size={17} strokeWidth={3} />
-                    <span>先生への提出が完了しました</span>
+                    <span>提出＆記録の保存が完了しました</span>
                   </div>
                   <span className="submit-banner-sub">
                     「{record.studentName}」のクリア記録が自動保存されました
@@ -97,7 +109,7 @@ export function ClearScreen({
                     <span>テストモードでクリアを確認しました</span>
                   </div>
                   <span className="submit-banner-sub">
-                    GAS_WEB_APP_URL 未設定のため送信はスキップされています
+                    Supabase または GAS の環境変数を設定すると自動記録＆ランキングが有効になります
                   </span>
                 </>
               )}
@@ -122,6 +134,35 @@ export function ClearScreen({
               </button>
             )}
           </div>
+
+          {/* 現在の順位ハイライト（Supabase保存時） */}
+          {rankInfo && (
+            <motion.div
+              className="clear-rank-card"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="clear-rank-left">
+                <Trophy size={18} color="var(--ochre)" />
+                <div>
+                  <div className="clear-rank-label">この単元の現在の順位</div>
+                  <div className="clear-rank-value font-mono">
+                    <strong>{rankInfo.rank}位</strong>
+                    <span> / {rankInfo.totalPlayers}人中</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href={rankingHref}
+                className="btn-paper-outline"
+                style={{ textDecoration: "none", padding: "8px 14px", fontSize: "13px" }}
+              >
+                <span>ランキングを見る</span>
+                <ArrowRight size={14} />
+              </Link>
+            </motion.div>
+          )}
 
           {/* 記録データテーブル */}
           <div className="cert-data-grid">
@@ -155,8 +196,24 @@ export function ClearScreen({
               <RotateCcw size={16} />
               <span>もう一度挑戦する</span>
             </button>
-            <button type="button" className="btn-paper-outline" onClick={onReturnToStart}>
-              名前を変えて最初から
+            <Link
+              href={rankingHref}
+              className="btn-paper-outline"
+              style={{ textDecoration: "none" }}
+            >
+              <Trophy size={15} />
+              <span>ランキングを見る</span>
+            </Link>
+          </div>
+
+          <div style={{ marginTop: "10px", textAlign: "center" }}>
+            <button
+              type="button"
+              className="ghost-toggle"
+              onClick={onReturnToStart}
+              style={{ border: "none", background: "transparent" }}
+            >
+              名前を変えて最初からやり直す
             </button>
           </div>
         </div>

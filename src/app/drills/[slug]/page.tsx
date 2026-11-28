@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DrillChallengeApp } from "@/components/DrillChallengeApp";
 import { getDrillBySlug } from "@/data/drills";
+import { isAnyStorageConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,10 @@ export default async function DrillPage({ params }: DrillPageProps) {
     notFound();
   }
 
-  const isGasConfigured = Boolean((process.env.GAS_WEB_APP_URL || "").trim());
-
-  return <DrillChallengeApp drill={drill} isGasConfigured={isGasConfigured} />;
+  return (
+    <DrillChallengeApp
+      drill={drill}
+      isGasConfigured={isAnyStorageConfigured()}
+    />
+  );
 }

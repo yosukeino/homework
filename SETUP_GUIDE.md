@@ -1,63 +1,43 @@
-# オンライン宿題 セットアップ＆Vercel公開ガイド
+# オンライン宿題 セットアップ＆Vercel＋Supabase公開ガイド
 
-Next.js（App Router）＋ Framer Motion ＋ Vercel ＋ Googleスプレッドシート（GAS）構成です。
-生徒が20問連続正解を達成すると、VercelのサーバーAPI（`/api/submit`）を経由して Googleスプレッドシートへ安全に自動記録されます。
-
----
-
-## Step 1. Googleスプレッドシートの準備（約3分）
-
-1. Googleドライブで**新しいGoogleスプレッドシート**を作成します（例：`中1英語_人称代名詞_宿題提出`）。
-2. メニューの **「拡張機能」→「Apps Script」** を開きます。
-3. エディタの既存コードをすべて消し、[`gas/Code.gs`](gas/Code.gs) の中身を貼り付けて保存します。
-4. 右上の **「デプロイ」→「新しいデプロイ」** をクリックし、種類に **「ウェブアプリ」** を選びます。
-   - **次のユーザーとして実行**：**自分**
-   - **アクセスできるユーザー**：**全員**（※生徒にログインさせないため必須）
-5. **「デプロイ」** をクリックし、権限を承認して表示された **ウェブアプリのURL**（`https://script.google.com/macros/s/.../exec`）をコピーします。
+Next.js（App Router）＋ Framer Motion ＋ Vercel ＋ **Supabase** 構成です。
+テーブルを1つ作るだけで、全単元の提出記録と**リアルタイムランキング（ノーミス優先 → 最速タイム順）**が一元管理されます。
 
 ---
 
-## Step 2. Vercel へデプロイ（約2分）
+## Step 1. Supabase にテーブルを1つ作成する（約1分）
 
-1. [Vercel](https://vercel.com/) のダッシュボードで **「Add New... → Project」** をクリックし、`yosukeino/homework` リポジトリをインポートします。
-2. **Environment Variables**（環境変数）に以下を追加します。
-   - **Key**：`GAS_WEB_APP_URL`
-   - **Value**：Step 1 でコピーした GAS ウェブアプリURL
-3. **「Deploy」** をクリックすれば公開完了です！発行されたURLを生徒に共有してください。
-
-> **メリット**：GAS URL をサーバー側の環境変数として保持するため、生徒のブラウザソースコードにスプレッドシート送信先URLが露出しません。
+1. Supabase ダッシュボードで対象のプロジェクトを開きます。
+2. 左メニューの **「SQL Editor」** → **「New query」** を開きます。
+3. [`supabase/schema.sql`](supabase/schema.sql) の中身をそのまま貼り付けて **「Run」** をクリックします。
+   - `public.homework_clears` テーブルとランキング用インデックス・RLS設定が自動作成されます。
 
 ---
 
-## ローカル開発・動作確認
+## Step 2. Supabase の接続キーを確認する（約30秒）
 
-```bash
-npm install
-cp .env.example .env.local
-# 必要なら .env.local の GAS_WEB_APP_URL にURLを設定（空欄でもテストモードで動作）
-npm run dev
-```
-
-ブラウザで `http://localhost:3000` を開いて確認できます。
-
-> **テスト時のコツ**：`src/data/pronouns.ts` の `DRILL_CONFIG.targetStreak` を一時的に `3` にすると、3問連続でクリア画面・自動送信の動作テストが素早く行えます（公開前に `20` に戻してください）。
+1. Supabase ダッシュボード左メニューの **「Project Settings」→「API」**（または **「Data API」 / 「API Keys」**）を開きます。
+2. 以下の2つをコピーします：
+   - **Project URL**（`https://xxxxxxxxxxxx.supabase.co`）
+   - **`service_role` キー**（または Secret key：`eyJ...` や `sb_secret_...`）
+     - ※サーバー側（Vercel API Route）だけで使用するため、生徒のブラウザには一切露出しません。
 
 ---
 
-## スプレッドシートに記録される内容
+## Step 3. Vercel の Environment Variables に登録する（約1分）
 
-20問連続クリア時に自動で **「クリア記録」** シートが作成され、以下が記録されます。
+1. Vercel の `homework` プロジェクト画面で **Settings → Environment Variables** を開きます。
+2. 以下の2つを追加して **Save** します：
+   - **Key**：`SUPABASE_URL` / **Value**：Project URL
+   - **Key**：`SUPABASE_SERVICE_ROLE_KEY` / **Value**：`service_role`（Secret）キー
+3. **Deployments** タブから最新のデプロイを **Redeploy** すれば完了です！
 
-| 列 | 内容 |
-| :--- | :--- |
-| 提出日時 | クリアした日時（日本時間） |
-| 氏名 | 生徒が開始時に入力した名前 |
-| 結果 | `20問連続クリア` |
-| 単元 | `中学英語・人称代名詞` |
-| 総解答数 | クリアまでに解いた合計問題数 |
-| ミス回数 | 途中でリセットされた回数 |
-| 所要時間 | 開始〜クリアまでの時間（例：`2分45秒`） |
-| 所要秒数 | 集計・並べ替え用の秒数 |
-| 確認コード | クリア画面に表示される一意ID（重複防止・照合用） |
+> **Googleスプレッドシートとの併用について**  
+> 既存の `GAS_WEB_APP_URL` が残っていれば Supabase と Googleスプレッドシートの両方に並行保存されます。Supabase に完全移行したい場合は、Vercel から `GAS_WEB_APP_URL` を削除するだけでOKです。
 
-- **クリア済み生徒の重複なし一覧**：別シートに `=UNIQUE('クリア記録'!B2:B)` と入力すると提出済み生徒だけが自動集計されます。
+---
+
+## 先生用の確認方法（Supabase Table Editor）
+
+- Supabase ダッシュボードの **「Table Editor」→「homework_clears」** を開くだけで、全単元のクリア履歴（氏名・単元・ミス数・タイム・日時）をフィルタ・CSVエクスポートできます。
+- 生徒向けランキングは `/rankings`（および各単元のスタート画面・クリア画面）で自動表示されます。

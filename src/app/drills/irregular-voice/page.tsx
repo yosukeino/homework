@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IrregularVoiceApp } from "@/components/IrregularVoiceApp";
+import { isAnyStorageConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function IrregularVoicePage() {
-  const isGasConfigured = Boolean((process.env.GAS_WEB_APP_URL || "").trim());
-  return <IrregularVoiceApp isGasConfigured={isGasConfigured} />;
+  return <IrregularVoiceApp isGasConfigured={isAnyStorageConfigured()} />;
 }

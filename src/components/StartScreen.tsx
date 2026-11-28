@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, BookOpen, Volume2, VolumeX } from "lucide-react";
 import type { DrillDefinition } from "@/types/drill";
+import { MiniRankingCard } from "./MiniRankingCard";
 
 interface StartScreenProps {
   drill: DrillDefinition;
@@ -121,7 +122,7 @@ export function StartScreen({
                 <label htmlFor="student-name-input" className="field-label">
                   氏名
                 </label>
-                <span className="field-note">クリア時の提出確認に記録されます</span>
+                <span className="field-note">提出確認・ランキング表示に使います</span>
               </div>
 
               <div className="name-row">
@@ -169,9 +170,11 @@ export function StartScreen({
 
           {!isGasConfigured && (
             <div className="demo-notice">
-              テストモードで動作中（環境変数 GAS_WEB_APP_URL 未設定）
+              テストモードで動作中（Supabase / GAS の環境変数未設定）
             </div>
           )}
+
+          <MiniRankingCard unitSlug={drill.slug} />
         </div>
       </div>
     </motion.section>

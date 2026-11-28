@@ -14,7 +14,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import type { ClearSubmissionPayload } from "@/app/api/submit/route";
+import type { ClearSubmissionPayload, SubmitApiResponse } from "@/app/api/submit/route";
 import {
   IRREGULAR_TARGET_STREAK,
   IRREGULAR_VERBS,
@@ -22,8 +22,9 @@ import {
 } from "@/data/irregularVerbs";
 import { playSoundEffect } from "@/lib/sound";
 import { speakVerbTriplet, stopSpeech } from "@/lib/speech";
-import { ClearScreen, SubmitStatus } from "./ClearScreen";
+import { ClearRankInfo, ClearScreen, SubmitStatus } from "./ClearScreen";
 import { IrregularVerbListModal } from "./IrregularVerbListModal";
+import { MiniRankingCard } from "./MiniRankingCard";
 
 type ScreenPhase = "start" | "play" | "clear";
 type ActiveSlot = "past" | "pp";
@@ -135,6 +136,7 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
   const [clearRecord, setClearRecord] = useState<ClearSubmissionPayload | null>(null);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("sending");
   const [submitError, setSubmitError] = useState("");
+  const [rankInfo, setRankInfo] = useState<ClearRankInfo | null>(null);
   const isSendingRef = useRef(false);
 
   useEffect(() => {
@@ -218,6 +220,7 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
       setMissCount(0);
       setClearRecord(null);
       setSubmitError("");
+      setRankInfo(null);
       setModalOpen(false);
 
       const first = drawNextVerb();
@@ -240,9 +243,12 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(record),
       });
-      const data = (await res.json()) as { ok?: boolean; demo?: boolean; error?: string };
+      const data = (await res.json()) as SubmitApiResponse;
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `送信エラー (HTTP ${res.status})`);
+      }
+      if (typeof data.rank === "number" && typeof data.totalPlayers === "number") {
+        setRankInfo({ rank: data.rank, totalPlayers: data.totalPlayers });
       }
       setSubmitStatus(data.demo ? "demo" : "ok");
     } catch (err) {
@@ -393,6 +399,7 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
       );
       const record: ClearSubmissionPayload = {
         submissionId: generateSubmissionId(),
+        unitSlug: "irregular-tiles",
         studentName,
         unitName: UNIT_NAME,
         targetStreak,
@@ -592,7 +599,7 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
                       <label htmlFor="tiles-name-input" className="field-label">
                         氏名
                       </label>
-                      <span className="field-note">クリア時の提出確認に記録されます</span>
+                      <span className="field-note">提出確認・ランキング表示に使います</span>
                     </div>
                     <div className="name-row">
                       <input
@@ -639,9 +646,11 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
 
                 {!isGasConfigured && (
                   <div className="demo-notice">
-                    テストモードで動作中（環境変数 GAS_WEB_APP_URL 未設定）
+                    テストモードで動作中（Supabase / GAS の環境変数未設定）
                   </div>
                 )}
+
+                <MiniRankingCard unitSlug="irregular-tiles" />
               </div>
             </div>
           </motion.section>
@@ -1049,6 +1058,7 @@ export function IrregularTilesApp({ isGasConfigured }: IrregularTilesAppProps) {
             record={clearRecord}
             submitStatus={submitStatus}
             submitError={submitError}
+            rankInfo={rankInfo}
             onRetrySubmit={() => void submitClearRecord(clearRecord)}
             onPlayAgain={() => startChallenge(studentName)}
             onReturnToStart={() => setScreen("start")}

@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import type { ClearSubmissionPayload } from "@/app/api/submit/route";
+import type { ClearSubmissionPayload, SubmitApiResponse } from "@/app/api/submit/route";
 import { CHOICE_LETTERS } from "@/data/pronouns";
 import { playSoundEffect } from "@/lib/sound";
 import type { DrillDefinition, DrillQuestion } from "@/types/drill";
-import { ClearScreen, SubmitStatus } from "./ClearScreen";
+import { ClearRankInfo, ClearScreen, SubmitStatus } from "./ClearScreen";
 import { HintTableModal } from "./HintTableModal";
 import { LastAnswerResult, PlayScreen } from "./PlayScreen";
 import { StartScreen } from "./StartScreen";
@@ -74,6 +74,7 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
   const [clearRecord, setClearRecord] = useState<ClearSubmissionPayload | null>(null);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("sending");
   const [submitError, setSubmitError] = useState("");
+  const [rankInfo, setRankInfo] = useState<ClearRankInfo | null>(null);
   const isSendingRef = useRef(false);
 
   useEffect(() => {
@@ -156,6 +157,7 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
       setMissCount(0);
       setClearRecord(null);
       setSubmitError("");
+      setRankInfo(null);
       setHintModalOpen(false);
 
       const firstQ = drawNextQuestion();
@@ -183,12 +185,15 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
         body: JSON.stringify(record),
       });
 
-      const data = (await res.json()) as { ok?: boolean; demo?: boolean; error?: string };
+      const data = (await res.json()) as SubmitApiResponse;
 
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `送信エラー (HTTP ${res.status})`);
       }
 
+      if (typeof data.rank === "number" && typeof data.totalPlayers === "number") {
+        setRankInfo({ rank: data.rank, totalPlayers: data.totalPlayers });
+      }
       setSubmitStatus(data.demo ? "demo" : "ok");
     } catch (err) {
       setSubmitStatus("error");
@@ -246,6 +251,7 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
       );
       const record: ClearSubmissionPayload = {
         submissionId: generateSubmissionId(),
+        unitSlug: drill.slug,
         studentName,
         unitName: drill.unitName,
         targetStreak,
@@ -268,6 +274,7 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
     streak,
     targetStreak,
     studentName,
+    drill.slug,
     drill.unitName,
     totalAnswered,
     missCount,
@@ -371,6 +378,7 @@ export function DrillChallengeApp({ drill, isGasConfigured }: DrillChallengeAppP
             record={clearRecord}
             submitStatus={submitStatus}
             submitError={submitError}
+            rankInfo={rankInfo}
             onRetrySubmit={() => void submitClearRecord(clearRecord)}
             onPlayAgain={() => startChallenge(studentName)}
             onReturnToStart={() => {
